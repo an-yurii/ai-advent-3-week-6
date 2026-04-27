@@ -24,29 +24,57 @@ class ChatHandler:
         )
         return self.llm
     
-    def chat(self, message: str, max_tokens: int = 512, temperature: float = 0.7) -> str:
-        """Generate a response for the given message"""
+    def chat(self, message: str, max_tokens: int = 512, temperature: float = 0.7) -> dict:
+        """Generate a response for the given message, returns dict with text and usage"""
         if self.llm is None:
             raise RuntimeError("Model not loaded")
         
+        # Format prompt for Llama 2 chat model
+        system_prompt = "You are a helpful, respectful and honest assistant."
+        formatted_prompt = f"""<s>[INST] <<SYS>>
+{system_prompt}
+<</SYS>>
+
+{message} [/INST]"""
+        
         output = self.llm(
-            message,
+            formatted_prompt,
             max_tokens=max_tokens,
             temperature=temperature,
-            stop=["\n", "###", "User:", "user:"]
+            stop=["\n", "###", "User:", "user:", "</s>", "[INST]"]
         )
-        return output["choices"][0]["text"].strip()
+        
+        if not output or "choices" not in output or len(output["choices"]) == 0:
+            return {"text": "", "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}}
+        
+        text = output["choices"][0].get("text", "")
+        
+        # Extract usage information if available
+        usage = output.get("usage", {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0})
+        
+        return {
+            "text": text.strip(),
+            "usage": usage
+        }
     
     def stream_chat(self, message: str, max_tokens: int = 512, temperature: float = 0.7) -> Generator[str, None, None]:
         """Stream chat responses token by token"""
         if self.llm is None:
             raise RuntimeError("Model not loaded")
         
+        # Format prompt for Llama 2 chat model
+        system_prompt = "You are a helpful, respectful and honest assistant."
+        formatted_prompt = f"""<s>[INST] <<SYS>>
+{system_prompt}
+<</SYS>>
+
+{message} [/INST]"""
+        
         output = self.llm(
-            message,
+            formatted_prompt,
             max_tokens=max_tokens,
             temperature=temperature,
-            stop=["\n", "###", "User:", "user:"],
+            stop=["\n", "###", "User:", "user:", "</s>", "[INST]"],
             stream=True
         )
         

@@ -119,15 +119,15 @@ async def chat(request: ChatRequest):
     temperature = request.temperature if request.temperature is not None else settings.temperature
     
     try:
-        response = chat_handler.chat(
+        result = chat_handler.chat(
             message=request.message,
             max_tokens=max_tokens,
             temperature=temperature
         )
         return ChatResponse(
-            message=response,
+            message=result.get("text", ""),
             model=settings.model_path,
-            usage={"prompt_tokens": 0, "completion_tokens": 0}
+            usage=result.get("usage", {"prompt_tokens": 0, "completion_tokens": 0})
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
